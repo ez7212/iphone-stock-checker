@@ -1,0 +1,80 @@
+name: Apple Bangkok pickup stock
+
+on:
+  schedule:
+    - cron: "2-59/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      test:
+        description: Send one Telegram test instead of checking stock
+        type: boolean
+        default: false
+
+# The stock-state branch contains only availability booleans, never credentials.
+# Enable Actions and permit GITHUB_TOKEN to create/push this branch.
+# Requires the two Telegram repository secrets below and installation on the default branch.
+# Scheduled runs may be delayed by GitHub; use local cron for tighter timing.
+permissions:
+  contents: write
+
+concurrency:
+  group: apple-bangkok-stock
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Restore durable state
+        id: restore
+        if: ${{ !inputs.test }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A network/auth failure is fatal, never mistaken for a first run.
+          remote_ref=$(git ls-remote --heads origin refs/heads/stock-state)
+          if [[ -n "$remote_ref" ]]; then
+            git fetch --no-tags origin refs/heads/stock-state:refs/remotes/origin/stock-state
+            git show refs/remotes/origin/stock-state:stock-state.json > stock-state.json
+          fi
+
+      - name: Check stock or send explicit test
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TEST_MODE: ${{ inputs.test }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$TEST_MODE" == "true" ]]; then
+            python stock_checker.py --test
+          else
+            python stock_checker.py --state-file stock-state.json
+          fi
+
+      - name: Persist state even after a partial Telegram failure
+        if: ${{ always() && !inputs.test && steps.restore.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -f stock-state.json ]] || exit 0
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          set --
+          if git rev-parse --verify refs/remotes/origin/stock-state >/dev/null 2>&1; then
+            if git show refs/remotes/origin/stock-state:stock-state.json | cmp -s - stock-state.json; then
+              exit 0
+            fi
+            set -- -p refs/remotes/origin/stock-state
+          fi
+          # Build a tree containing ONLY state; leave the checked-out code untouched.
+          blob=$(git hash-object -w stock-state.json)
+          tree=$(printf '100644 blob %s\tstock-state.json\n' "$blob" | git mktree)
+          commit=$(git commit-tree "$tree" "$@" -m 'Update pickup alert state')
+          git push origin "$commit:refs/heads/stock-state"
