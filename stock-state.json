@@ -4,10 +4,10 @@
     "central|MJXQ4ZP/A": false,
     "central|MJXT4ZP/A": false,
     "central|MJXV4ZP/A": false,
-    "iconsiam|MJXN4ZP/A": false,
-    "iconsiam|MJXQ4ZP/A": false,
-    "iconsiam|MJXT4ZP/A": false,
-    "iconsiam|MJXV4ZP/A": false
+    "iconsiam|MJXN4ZP/A": true,
+    "iconsiam|MJXQ4ZP/A": true,
+    "iconsiam|MJXT4ZP/A": true,
+    "iconsiam|MJXV4ZP/A": true
   },
   "version": 1
 }
