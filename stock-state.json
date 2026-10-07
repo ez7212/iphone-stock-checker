@@ -1,13 +1,13 @@
 {
   "pairs": {
-    "central|MJXN4ZP/A": false,
+    "central|MJXN4ZP/A": true,
     "central|MJXQ4ZP/A": false,
-    "central|MJXT4ZP/A": false,
-    "central|MJXV4ZP/A": false,
+    "central|MJXT4ZP/A": true,
+    "central|MJXV4ZP/A": true,
     "iconsiam|MJXN4ZP/A": true,
     "iconsiam|MJXQ4ZP/A": true,
     "iconsiam|MJXT4ZP/A": true,
-    "iconsiam|MJXV4ZP/A": true
+    "iconsiam|MJXV4ZP/A": false
   },
   "version": 1
 }
